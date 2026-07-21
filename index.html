@@ -372,6 +372,7 @@
   .outage-tag.resolved { background: rgba(74, 154, 74, 0.2); color: var(--status-ok); }
   .outage-tag.monitoring { background: rgba(212, 168, 50, 0.2); color: var(--gold); }
   .outage-tag.identified { background: rgba(230, 126, 34, 0.2); color: var(--orange); }
+  .outage-tag.scheduled { background: rgba(100, 140, 200, 0.2); color: #7EAAD4; }
   .outage-tag.major { background: rgba(192, 57, 43, 0.2); color: var(--red); }
 
   .no-outages {
@@ -588,7 +589,11 @@ async function fetchGridStatus() {
         const pubDate = items[i].querySelector('pubDate')?.textContent || '';
 
         const diff = pubDate ? Date.now() - new Date(pubDate).getTime() : 0;
-        if (diff > threeDaysMs) continue;
+        const absDiff = Math.abs(diff);
+        const isFuture = diff < 0;
+
+        if (!isFuture && diff > threeDaysMs) continue;
+        if (isFuture && absDiff > threeDaysMs) continue;
 
         let status = 'monitoring';
         const titleLower = title.toLowerCase();
@@ -600,6 +605,9 @@ async function fetchGridStatus() {
         } else if (titleLower.includes('identified')) {
           status = 'identified';
           hasActiveIncident = true;
+        } else if (isFuture) {
+          status = 'scheduled';
+          hasActiveIncident = true;
         } else if (titleLower.includes('monitoring') || titleLower.includes('update')) {
           status = 'monitoring';
           hasActiveIncident = true;
@@ -607,11 +615,17 @@ async function fetchGridStatus() {
 
         let timeAgo = '';
         if (pubDate) {
-          const hours = Math.floor(diff / 3600000);
+          const hours = Math.floor(absDiff / 3600000);
           const days = Math.floor(hours / 24);
-          if (days > 0) timeAgo = days + 'd ago';
-          else if (hours > 0) timeAgo = hours + 'h ago';
-          else timeAgo = Math.floor(diff / 60000) + 'm ago';
+          if (isFuture) {
+            if (days > 0) timeAgo = 'in ' + days + 'd';
+            else if (hours > 0) timeAgo = 'in ' + hours + 'h';
+            else timeAgo = 'in ' + Math.floor(absDiff / 60000) + 'm';
+          } else {
+            if (days > 0) timeAgo = days + 'd ago';
+            else if (hours > 0) timeAgo = hours + 'h ago';
+            else timeAgo = Math.floor(diff / 60000) + 'm ago';
+          }
         }
 
         incidents.push({ title, status, timeAgo });
