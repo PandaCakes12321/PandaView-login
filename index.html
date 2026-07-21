@@ -328,6 +328,45 @@
   .stat-value .status-text.degraded { color: var(--orange); }
   .stat-value .status-text.major { color: var(--red); }
 
+  .ticker-wrap {
+    overflow: hidden;
+    background: rgba(230, 126, 34, 0.08);
+    border: 1px solid rgba(230, 126, 34, 0.2);
+    border-radius: 4px;
+    margin-bottom: 14px;
+    padding: 6px 0;
+    display: none;
+  }
+  .ticker-wrap.active { display: block; }
+  .ticker-track {
+    display: flex;
+    gap: 0;
+    width: max-content;
+    animation: ticker-scroll var(--ticker-dur, 20s) linear infinite;
+  }
+  .ticker-track:hover { animation-play-state: paused; }
+  .ticker-item {
+    white-space: nowrap;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    padding: 0 24px;
+    color: var(--cream);
+  }
+  .ticker-item .svc-name { color: var(--cream); }
+  .ticker-item .svc-status { font-weight: 600; margin-left: 5px; }
+  .ticker-item .svc-status.degraded { color: var(--orange); }
+  .ticker-item .svc-status.major { color: var(--red); }
+  .ticker-item .svc-status.partial { color: var(--gold); }
+  .ticker-sep {
+    color: var(--gold-dim);
+    padding: 0 4px;
+    opacity: 0.4;
+  }
+  @keyframes ticker-scroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
   .outages-section { margin-top: 14px; }
   .outages-header {
     font-size: 11px;
@@ -431,6 +470,10 @@
           <div class="stat-label">SL Time</div>
           <div class="stat-value time" id="slTime">--:--</div>
         </div>
+      </div>
+
+      <div class="ticker-wrap" id="tickerWrap">
+        <div class="ticker-track" id="tickerTrack"></div>
       </div>
 
       <div class="outages-section">
@@ -713,13 +756,54 @@ async function fetchOnlineCount() {
   countEl.textContent = '--';
 }
 
+// ---- Service status ticker ----
+async function fetchServiceStatus() {
+  const wrap = document.getElementById('tickerWrap');
+  const track = document.getElementById('tickerTrack');
+
+  try {
+    const url = 'https://status.secondlifegrid.net/api/v2/components.json';
+    let data;
+    try {
+      const resp = await fetch(url);
+      if (resp.ok) data = await resp.json();
+    } catch(e) {}
+    if (!data) {
+      const resp = await fetch('https://corsproxy.io/?' + encodeURIComponent(url));
+      if (resp.ok) data = await resp.json();
+    }
+    if (!data) return;
+
+    const badServices = data.components.filter(c => c.status !== 'operational');
+    if (badServices.length === 0) {
+      wrap.classList.remove('active');
+      return;
+    }
+
+    const statusLabel = s => s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    const statusClass = s => s.includes('major') || s.includes('critical') ? 'major' : s.includes('partial') ? 'partial' : 'degraded';
+
+    const items = badServices.map(c =>
+      `<span class="ticker-item"><span class="svc-name">${c.name}</span><span class="svc-status ${statusClass(c.status)}">${statusLabel(c.status)}</span></span>`
+    ).join('<span class="ticker-sep">•</span>');
+
+    track.innerHTML = items + '<span class="ticker-sep">•</span>' + items + '<span class="ticker-sep">•</span>';
+
+    const dur = Math.max(12, badServices.length * 5);
+    wrap.style.setProperty('--ticker-dur', dur + 's');
+    wrap.classList.add('active');
+  } catch(e) {}
+}
+
 // Fetch data on load
 fetchGridStatus();
 fetchOnlineCount();
+fetchServiceStatus();
 
 // Refresh every 5 minutes
 setInterval(fetchGridStatus, 300000);
 setInterval(fetchOnlineCount, 300000);
+setInterval(fetchServiceStatus, 300000);
 </script>
 </body>
 </html>
