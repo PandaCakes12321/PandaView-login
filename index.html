@@ -775,9 +775,26 @@ async function fetchServiceStatus() {
     if (!data) return;
 
     const badServices = data.components.filter(c => c.status !== 'operational' && !c.group);
+    const statusEl = document.getElementById('gridStatus');
+    const dotEl = document.getElementById('gridDot');
+    const hasMajor = badServices.some(c => c.status.includes('major') || c.status.includes('critical'));
+
     if (badServices.length === 0) {
       wrap.classList.remove('active');
+      statusEl.textContent = 'Online';
+      statusEl.className = 'status-text ok';
+      dotEl.className = 'status-dot';
       return;
+    }
+
+    if (hasMajor) {
+      statusEl.textContent = 'Major Outage';
+      statusEl.className = 'status-text major';
+      dotEl.className = 'status-dot major';
+    } else {
+      statusEl.textContent = 'Degraded';
+      statusEl.className = 'status-text degraded';
+      dotEl.className = 'status-dot degraded';
     }
 
     const statusLabel = s => s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
