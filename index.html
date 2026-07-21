@@ -774,7 +774,7 @@ async function fetchServiceStatus() {
     }
     if (!data) return;
 
-    const badServices = data.components.filter(c => c.status !== 'operational');
+    const badServices = data.components.filter(c => c.status !== 'operational' && !c.group);
     if (badServices.length === 0) {
       wrap.classList.remove('active');
       return;
