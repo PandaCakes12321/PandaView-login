@@ -33,13 +33,16 @@
     background: var(--bg);
     color: var(--cream);
     font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100%;
     height: 100%;
-    overflow: hidden;
   }
   body {
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 20px 0;
   }
 
   .scene {
@@ -147,6 +150,7 @@
     z-index: 2;
     width: 520px;
     max-width: 95vw;
+    flex-shrink: 0;
   }
 
   .card {
@@ -444,22 +448,21 @@
 <script>
 // ---- Bamboo forest generation ----
 const scene = document.getElementById('scene');
-const W = window.innerWidth;
-const H = window.innerHeight;
 
-function addBamboo(x, height, thickness, opacity, swayDeg) {
+function addBamboo(xPct, height, thickness, opacity, swayDeg) {
   const stalk = document.createElement('div');
   stalk.className = 'bamboo';
-  stalk.style.left = x + 'px';
-  stalk.style.height = height + 'px';
+  stalk.style.left = xPct + '%';
+  stalk.style.height = height + 'vh';
   stalk.style.width = thickness + 'px';
   stalk.style.opacity = opacity;
   stalk.style.setProperty('--duration', (3.5 + Math.random() * 3) + 's');
   stalk.style.setProperty('--delay', (-Math.random() * 5) + 's');
   stalk.style.setProperty('--sway-amount', swayDeg + 'deg');
 
+  const hPx = window.innerHeight * (height / 100);
   const nodeSpacing = 70 + Math.random() * 30;
-  const nodeCount = Math.floor(height / nodeSpacing);
+  const nodeCount = Math.floor(hPx / nodeSpacing);
   for (let n = 1; n < nodeCount; n++) {
     const node = document.createElement('div');
     node.className = 'bamboo-node';
@@ -490,31 +493,42 @@ function addBamboo(x, height, thickness, opacity, swayDeg) {
   scene.appendChild(stalk);
 }
 
-// Left forest — 3 layers
-for (let i = 0; i < 10; i++) addBamboo(-20 + Math.random() * 200, H * 0.5 + Math.random() * H * 0.3, 6 + Math.random() * 4, 0.2 + Math.random() * 0.1, 0.5 + Math.random() * 0.5);
-for (let i = 0; i < 12; i++) addBamboo(-10 + Math.random() * 180, H * 0.6 + Math.random() * H * 0.35, 10 + Math.random() * 6, 0.45 + Math.random() * 0.15, 0.8 + Math.random() * 0.7);
-for (let i = 0; i < 8; i++) addBamboo(-5 + Math.random() * 160, H * 0.7 + Math.random() * H * 0.3, 14 + Math.random() * 10, 0.7 + Math.random() * 0.3, 1.0 + Math.random() * 1.0);
+function buildForest() {
+  scene.querySelectorAll('.bamboo, .firefly').forEach(el => el.remove());
 
-// Right forest — 3 layers
-for (let i = 0; i < 10; i++) addBamboo(W - 200 + Math.random() * 220, H * 0.5 + Math.random() * H * 0.3, 6 + Math.random() * 4, 0.2 + Math.random() * 0.1, 0.5 + Math.random() * 0.5);
-for (let i = 0; i < 12; i++) addBamboo(W - 180 + Math.random() * 200, H * 0.6 + Math.random() * H * 0.35, 10 + Math.random() * 6, 0.45 + Math.random() * 0.15, 0.8 + Math.random() * 0.7);
-for (let i = 0; i < 8; i++) addBamboo(W - 160 + Math.random() * 170, H * 0.7 + Math.random() * H * 0.3, 14 + Math.random() * 10, 0.7 + Math.random() * 0.3, 1.0 + Math.random() * 1.0);
+  // Left forest — 3 layers (positions as % of viewport width)
+  for (let i = 0; i < 10; i++) addBamboo(-2 + Math.random() * 14, 50 + Math.random() * 30, 6 + Math.random() * 4, 0.2 + Math.random() * 0.1, 0.5 + Math.random() * 0.5);
+  for (let i = 0; i < 12; i++) addBamboo(-1 + Math.random() * 13, 60 + Math.random() * 35, 10 + Math.random() * 6, 0.45 + Math.random() * 0.15, 0.8 + Math.random() * 0.7);
+  for (let i = 0; i < 8; i++) addBamboo(0 + Math.random() * 12, 70 + Math.random() * 30, 14 + Math.random() * 10, 0.7 + Math.random() * 0.3, 1.0 + Math.random() * 1.0);
 
-// Mid-ground background stalks
-for (let i = 0; i < 14; i++) addBamboo(180 + Math.random() * (W - 360), H * 0.3 + Math.random() * H * 0.35, 5 + Math.random() * 5, 0.08 + Math.random() * 0.08, 0.4 + Math.random() * 0.4);
+  // Right forest — 3 layers
+  for (let i = 0; i < 10; i++) addBamboo(86 + Math.random() * 16, 50 + Math.random() * 30, 6 + Math.random() * 4, 0.2 + Math.random() * 0.1, 0.5 + Math.random() * 0.5);
+  for (let i = 0; i < 12; i++) addBamboo(87 + Math.random() * 14, 60 + Math.random() * 35, 10 + Math.random() * 6, 0.45 + Math.random() * 0.15, 0.8 + Math.random() * 0.7);
+  for (let i = 0; i < 8; i++) addBamboo(88 + Math.random() * 13, 70 + Math.random() * 30, 14 + Math.random() * 10, 0.7 + Math.random() * 0.3, 1.0 + Math.random() * 1.0);
 
-// Fireflies
-for (let i = 0; i < 28; i++) {
-  const ff = document.createElement('div');
-  ff.className = 'firefly';
-  ff.style.left = (Math.random() * 100) + '%';
-  ff.style.top = (10 + Math.random() * 70) + '%';
-  ff.style.setProperty('--dur', (5 + Math.random() * 8) + 's');
-  ff.style.setProperty('--delay', (-Math.random() * 12) + 's');
-  ff.style.setProperty('--dx', (-40 + Math.random() * 80) + 'px');
-  ff.style.setProperty('--dy', (-50 + Math.random() * 100) + 'px');
-  scene.appendChild(ff);
+  // Mid-ground background stalks
+  for (let i = 0; i < 14; i++) addBamboo(14 + Math.random() * 72, 30 + Math.random() * 35, 5 + Math.random() * 5, 0.08 + Math.random() * 0.08, 0.4 + Math.random() * 0.4);
+
+  // Fireflies
+  for (let i = 0; i < 28; i++) {
+    const ff = document.createElement('div');
+    ff.className = 'firefly';
+    ff.style.left = (Math.random() * 100) + '%';
+    ff.style.top = (10 + Math.random() * 70) + '%';
+    ff.style.setProperty('--dur', (5 + Math.random() * 8) + 's');
+    ff.style.setProperty('--delay', (-Math.random() * 12) + 's');
+    ff.style.setProperty('--dx', (-40 + Math.random() * 80) + 'px');
+    ff.style.setProperty('--dy', (-50 + Math.random() * 100) + 'px');
+    scene.appendChild(ff);
+  }
 }
+
+buildForest();
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(buildForest, 300);
+});
 
 // ---- SL Time (Pacific Time) ----
 function updateSLTime() {
