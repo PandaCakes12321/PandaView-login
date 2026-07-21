@@ -566,11 +566,10 @@ async function fetchGridStatus() {
       if (resp.ok) rssText = await resp.text();
     } catch(e) {}
 
-    // If direct fetch failed, try allorigins proxy
+    // If direct fetch failed, try corsproxy
     if (!rssText) {
       try {
-        const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(statusUrl);
-        const resp = await fetch(proxyUrl);
+        const resp = await fetch('https://corsproxy.io/?' + encodeURIComponent(statusUrl));
         if (resp.ok) rssText = await resp.text();
       } catch(e) {}
     }
@@ -690,7 +689,7 @@ async function fetchOnlineCount() {
   } catch(e) {}
 
   try {
-    const resp = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent('https://api.secondlife.com/datafeeds/homepage.txt'));
+    const resp = await fetch('https://corsproxy.io/?' + encodeURIComponent('https://api.secondlife.com/datafeeds/homepage.txt'));
     if (resp.ok) {
       const count = parseCount(await resp.text());
       if (count !== null) { countEl.textContent = count.toLocaleString(); return; }
