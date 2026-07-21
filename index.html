@@ -598,19 +598,20 @@ async function fetchGridStatus() {
         let status = 'monitoring';
         const titleLower = title.toLowerCase();
         if (titleLower.includes('resolved') || titleLower.includes('completed')) {
-          status = 'resolved';
+          continue;
+        } else if (isFuture) {
+          status = 'scheduled';
         } else if (titleLower.includes('investigating')) {
           status = 'investigating';
           hasActiveIncident = true;
         } else if (titleLower.includes('identified')) {
           status = 'identified';
           hasActiveIncident = true;
-        } else if (isFuture) {
-          status = 'scheduled';
-          hasActiveIncident = true;
         } else if (titleLower.includes('monitoring') || titleLower.includes('update')) {
           status = 'monitoring';
           hasActiveIncident = true;
+        } else {
+          continue;
         }
 
         let timeAgo = '';
@@ -631,11 +632,11 @@ async function fetchGridStatus() {
         incidents.push({ title, status, timeAgo });
       }
 
-      // Active issues first, then by recency
+      // Live issues first, then scheduled
       incidents.sort((a, b) => {
-        const aActive = a.status !== 'resolved' ? 1 : 0;
-        const bActive = b.status !== 'resolved' ? 1 : 0;
-        return bActive - aActive;
+        const aLive = a.status !== 'scheduled' ? 1 : 0;
+        const bLive = b.status !== 'scheduled' ? 1 : 0;
+        return bLive - aLive;
       });
 
       // Update grid status indicator
@@ -652,8 +653,7 @@ async function fetchGridStatus() {
       // Render incidents
       if (incidents.length > 0) {
         outagesEl.innerHTML = incidents.map(inc => {
-          const itemClass = inc.status === 'resolved' ? 'outage-item resolved' :
-                           inc.status === 'investigating' ? 'outage-item major' : 'outage-item';
+          const itemClass = inc.status === 'investigating' ? 'outage-item major' : 'outage-item';
           return `<div class="${itemClass}">
             <div>
               <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
@@ -665,7 +665,7 @@ async function fetchGridStatus() {
           </div>`;
         }).join('');
       } else {
-        outagesEl.innerHTML = '<div class="no-outages">No recent incidents</div>';
+        outagesEl.innerHTML = '<div class="no-outages">All clear — no active issues</div>';
       }
     } else {
       statusEl.textContent = 'Online';
