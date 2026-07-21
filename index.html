@@ -643,39 +643,35 @@ async function fetchGridStatus() {
   }
 }
 
-// ---- Online count (from SL login page XML) ----
+// ---- Online count (from SL official API) ----
 async function fetchOnlineCount() {
   const countEl = document.getElementById('onlineCount');
   try {
-    // SL provides online count at their login XMLRPC or via the economy API
-    const urls = [
-      'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://secondlife.com/xmlhttp/login.cgi'),
-    ];
-
-    // Try the homepage scrape approach
-    try {
-      const resp = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent('https://secondlife.com/'));
-      if (resp.ok) {
-        const html = await resp.text();
-        // Look for online count in the page
-        const match = html.match(/(\d[\d,]+)\s*(?:residents?\s+online|online\s+now|people\s+inworld)/i);
-        if (match) {
-          countEl.textContent = match[1];
-          return;
-        }
-        // Alternative: look for a data attribute or JSON
-        const jsonMatch = html.match(/"online[_\s]?count"[:\s]*(\d+)/i);
-        if (jsonMatch) {
-          countEl.textContent = parseInt(jsonMatch[1]).toLocaleString();
-          return;
-        }
+    const resp = await fetch('https://api.secondlife.com/datafeeds/homepage.txt');
+    if (resp.ok) {
+      const text = await resp.text();
+      const match = text.match(/^inworld\n(\d+)/m);
+      if (match) {
+        countEl.textContent = parseInt(match[1]).toLocaleString();
+        return;
       }
-    } catch(e) {}
+    }
+  } catch(e) {}
 
-    countEl.textContent = '--';
-  } catch(e) {
-    countEl.textContent = '--';
-  }
+  // Fallback via CORS proxy
+  try {
+    const resp = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent('https://api.secondlife.com/datafeeds/homepage.txt'));
+    if (resp.ok) {
+      const text = await resp.text();
+      const match = text.match(/^inworld\n(\d+)/m);
+      if (match) {
+        countEl.textContent = parseInt(match[1]).toLocaleString();
+        return;
+      }
+    }
+  } catch(e) {}
+
+  countEl.textContent = '--';
 }
 
 // Fetch data on load
