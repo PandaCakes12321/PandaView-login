@@ -568,11 +568,14 @@ async function fetchGridStatus() {
 
       let hasActiveIncident = false;
       let incidents = [];
+      const threeDaysMs = 3 * 24 * 3600000;
 
-      for (let i = 0; i < Math.min(items.length, 5); i++) {
+      for (let i = 0; i < items.length; i++) {
         const title = items[i].querySelector('title')?.textContent || '';
         const pubDate = items[i].querySelector('pubDate')?.textContent || '';
-        const desc = items[i].querySelector('description')?.textContent || '';
+
+        const diff = pubDate ? Date.now() - new Date(pubDate).getTime() : 0;
+        if (diff > threeDaysMs) continue;
 
         let status = 'monitoring';
         const titleLower = title.toLowerCase();
@@ -591,7 +594,6 @@ async function fetchGridStatus() {
 
         let timeAgo = '';
         if (pubDate) {
-          const diff = Date.now() - new Date(pubDate).getTime();
           const hours = Math.floor(diff / 3600000);
           const days = Math.floor(hours / 24);
           if (days > 0) timeAgo = days + 'd ago';
@@ -601,6 +603,13 @@ async function fetchGridStatus() {
 
         incidents.push({ title, status, timeAgo });
       }
+
+      // Active issues first, then by recency
+      incidents.sort((a, b) => {
+        const aActive = a.status !== 'resolved' ? 1 : 0;
+        const bActive = b.status !== 'resolved' ? 1 : 0;
+        return bActive - aActive;
+      });
 
       // Update grid status indicator
       if (hasActiveIncident) {
@@ -646,28 +655,31 @@ async function fetchGridStatus() {
 // ---- Online count (from SL official API) ----
 async function fetchOnlineCount() {
   const countEl = document.getElementById('onlineCount');
+
+  function parseCount(text) {
+    const lines = text.split(/\r?\n/);
+    for (let i = 0; i < lines.length - 1; i++) {
+      if (lines[i].trim() === 'inworld') {
+        const num = parseInt(lines[i + 1].trim());
+        if (!isNaN(num)) return num;
+      }
+    }
+    return null;
+  }
+
   try {
     const resp = await fetch('https://api.secondlife.com/datafeeds/homepage.txt');
     if (resp.ok) {
-      const text = await resp.text();
-      const match = text.match(/^inworld\n(\d+)/m);
-      if (match) {
-        countEl.textContent = parseInt(match[1]).toLocaleString();
-        return;
-      }
+      const count = parseCount(await resp.text());
+      if (count !== null) { countEl.textContent = count.toLocaleString(); return; }
     }
   } catch(e) {}
 
-  // Fallback via CORS proxy
   try {
     const resp = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent('https://api.secondlife.com/datafeeds/homepage.txt'));
     if (resp.ok) {
-      const text = await resp.text();
-      const match = text.match(/^inworld\n(\d+)/m);
-      if (match) {
-        countEl.textContent = parseInt(match[1]).toLocaleString();
-        return;
-      }
+      const count = parseCount(await resp.text());
+      if (count !== null) { countEl.textContent = count.toLocaleString(); return; }
     }
   } catch(e) {}
 
